@@ -28,7 +28,7 @@ class Buffer:
     def free_space(self):
         free_size = buffer_size
         for packet in self.packets:
-            free_size - len(packet)
+            free_size -= len(packet)
         return free_size
 
     def add_packet(self, content, packet_id):

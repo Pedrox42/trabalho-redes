@@ -6,6 +6,7 @@ import math
 
 serverAddressPort = ("127.0.0.1", 20001)
 UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+
 while True:
     # file_name = input("Digite o nome do arquivo a ser enviado: ")
     file_name = "teste.png"
@@ -18,6 +19,7 @@ while True:
         for packet in list(client_buffer.packets):
             print("Enviando pacote de número {}".format(packet.packet_id))
             bytesToSend = pickle.dumps(packet)
+            len(bytesToSend)
             UDPClientSocket.sendto(bytesToSend, serverAddressPort)
 
             last_packet_first_byte = client_buffer.packets[-1].packet_id
@@ -26,8 +28,8 @@ while True:
             file.read(last_packet_last_byte)
 
             packet_id = last_packet_last_byte
-            byte = file.read(client_buffer.free_space() - (math.ceil(packet_id.bit_length() / 8)))
             client_buffer.packets.remove(packet)
+            byte = file.read(client_buffer.free_space() - (math.ceil(packet_id.bit_length() / 8)))
             if byte:
                 client_buffer.add_packet(byte, packet_id)
     break
