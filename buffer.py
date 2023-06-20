@@ -23,11 +23,13 @@ class Buffer:
         return len(self.packets) == 0
 
     def is_full(self):
-        size = 0
-        for packet in self.packets:
-            size += len(packet)
+        return math.ceil(buffer_size / max_packet_size) <= len(self.packets)
 
-        return size >= buffer_size
+    def free_space(self):
+        free_size = buffer_size
+        for packet in self.packets:
+            free_size - len(packet)
+        return free_size
 
     def add_packet(self, content, packet_id):
         if not self.is_full():
@@ -46,9 +48,10 @@ class Buffer:
         while byte:
             if not self.is_full():
                 self.add_packet(byte, packet_id)
-
-            packet_id += len(byte)
-            byte = file.read(max_packet_size - (math.ceil(packet_id.bit_length() / 8)))
+                packet_id += len(byte)
+                byte = file.read(max_packet_size - (math.ceil(packet_id.bit_length() / 8)))
+            else:
+                break
 
         file.close()
 

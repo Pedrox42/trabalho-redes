@@ -2,45 +2,33 @@ import os
 import socket
 import buffer
 import pickle
+import math
 
-buffers = []
 serverAddressPort = ("127.0.0.1", 20001)
+UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 while True:
-    file_name = input("Digite o nome do arquivo a ser enviado: ")
-    byte = True
-
-    print("Tamanho do arquivo: " + str(os.stat(file_name).st_size))
+    # file_name = input("Digite o nome do arquivo a ser enviado: ")
+    file_name = "teste.png"
+    print("Tamanho do arquivo: {}".format(os.stat(file_name).st_size))
 
     start_from_byte = 0
-    while byte:
-        current_buffer = buffer.Buffer(file_name, start_from_byte)
-        buffers.append(current_buffer)
+    client_buffer = buffer.Buffer(file_name, start_from_byte)
 
-        file = open(file_name, "rb")
-        start_from_byte += current_buffer.total_file_read_size()
-        file.read(start_from_byte)
-        byte = file.read(buffer.buffer_size)
-        file.close()
-
-    print("Total de buffers: " + str(len(buffers)))
-
-    total_packets = 0
-    total_packets_size = 0
-
-    for current_buffer in buffers:
-        total_packets += len(current_buffer.packets)
-        for packet in current_buffer.packets:
-            total_packets_size += len(packet)
-
-    print("Total de pacotes: " + str(total_packets))
-    print("Tamanho total de pacotes: " + str(total_packets_size))
-
-    for current_buffer in list(buffers):
-        for packet in current_buffer.packets:
+    while not client_buffer.is_empty():
+        for packet in list(client_buffer.packets):
+            print("Enviando pacote de número {}".format(packet.packet_id))
             bytesToSend = pickle.dumps(packet)
-            UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
             UDPClientSocket.sendto(bytesToSend, serverAddressPort)
-        buffers.remove(current_buffer)
 
-    print("Total de buffers: " + str(len(buffers)))
+            last_packet_first_byte = client_buffer.packets[-1].packet_id
+            last_packet_last_byte = last_packet_first_byte + len(client_buffer.packets[-1].content)
+            file = open(file_name, "rb")
+            file.read(last_packet_last_byte)
+
+            packet_id = last_packet_last_byte
+            byte = file.read(client_buffer.free_space() - (math.ceil(packet_id.bit_length() / 8)))
+            client_buffer.packets.remove(packet)
+            if byte:
+                client_buffer.add_packet(byte, packet_id)
+    break
 
