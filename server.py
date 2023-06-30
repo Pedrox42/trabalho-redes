@@ -14,8 +14,10 @@ while True:
     bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
     message = bytesAddressPair[0]
     clientMsg = pickle.loads(message)
+    clientAddressPort = bytesAddressPair[1]
+    UDPServerSocket.sendto(pickle.dumps(1), clientAddressPort)
 
     print(clientMsg.packet_id)
-    f = open("C:/Users/pedri/Documents/Redes/teste-recebido.png", "ab")
+    f = open("teste-recebido.pdf", "ab")
     f.write(clientMsg.content)
     f.close()
