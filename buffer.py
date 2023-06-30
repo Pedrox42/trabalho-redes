@@ -1,7 +1,8 @@
 import math
 
-buffer_size = 8192
-max_packet_size = 1024
+pickle_dump_size = 69
+max_packet_size = 1024 - pickle_dump_size
+buffer_size = 30 * max_packet_size
 
 
 class Packet:
@@ -16,6 +17,7 @@ class Packet:
 class Buffer:
     def __init__(self, file_name, start_from_byte):
         self.packets = []
+        self.current_byte = start_from_byte
         self.start_from_byte = start_from_byte
         self.arrange_packets(file_name, start_from_byte)
 
@@ -28,13 +30,14 @@ class Buffer:
     def free_space(self):
         free_size = buffer_size
         for packet in self.packets:
-            free_size - len(packet)
+            free_size -= len(packet)
         return free_size
 
     def add_packet(self, content, packet_id):
         if not self.is_full():
             packet = Packet(content, packet_id)
             self.packets.append(packet)
+            self.current_byte += len(content)
         else:
             print("Buffer cheio!")
 
@@ -48,7 +51,7 @@ class Buffer:
         while byte:
             if not self.is_full():
                 self.add_packet(byte, packet_id)
-                packet_id += len(byte)
+                packet_id += 1
                 byte = file.read(max_packet_size - (math.ceil(packet_id.bit_length() / 8)))
             else:
                 break

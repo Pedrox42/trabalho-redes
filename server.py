@@ -4,8 +4,7 @@ import pickle
 
 localIP = "127.0.0.1"
 localPort = 20001
-bufferSize = 200000
-# bufferSize = buffer.buffer_size
+bufferSize = buffer.buffer_size
 
 UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPServerSocket.bind((localIP, localPort))
@@ -15,8 +14,10 @@ while True:
     bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
     message = bytesAddressPair[0]
     clientMsg = pickle.loads(message)
+    clientAddressPort = bytesAddressPair[1]
+    UDPServerSocket.sendto(pickle.dumps(1), clientAddressPort)
 
     print(clientMsg.packet_id)
-    f = open("C:/Users/pedri/Documents/Redes/teste-recebido.png", "ab")
+    f = open("teste-recebido.pdf", "ab")
     f.write(clientMsg.content)
     f.close()
