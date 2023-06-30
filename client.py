@@ -9,7 +9,7 @@ UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPClientSocket.setblocking(False)
 while True:
     # file_name = input("Digite o nome do arquivo a ser enviado: ")
-    file_name = "teste.pdf"
+    file_name = "teste.png"
     print("Tamanho do arquivo: {}".format(os.stat(file_name).st_size))
 
     start_from_byte = 0
@@ -21,8 +21,7 @@ while True:
             bytesToSend = pickle.dumps(packet)
             UDPClientSocket.sendto(bytesToSend, serverAddressPort)
 
-            last_packet_first_byte = client_buffer.current_byte
-            last_packet_last_byte = last_packet_first_byte + len(client_buffer.packets[-1].content)
+            last_packet_last_byte = client_buffer.current_byte
             file = open(file_name, "rb")
             file.read(last_packet_last_byte)
 
