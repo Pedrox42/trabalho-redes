@@ -1,25 +1,21 @@
 import math
+import packets
 
 pickle_dump_size = 69
 max_packet_size = 1024 - pickle_dump_size
 buffer_size = 30 * max_packet_size
-
-
-class Packet:
-    def __init__(self, content, packet_id):
-        self.content = content
-        self.packet_id = packet_id
-
-    def __len__(self):
-        return len(self.content) + math.ceil(self.packet_id.bit_length() / 8)
+# 1° pacote -> ser o pacote de SYN -> SYNACK -> ACK -> Envia primeiro pacote
+# Último pacote -> FIN -> FINACK -> Finaliza
+# Fazer o ack de confirmação
+# Fazer a janela deslizante
 
 
 class Buffer:
-    def __init__(self, file_name, start_from_byte):
+    def __init__(self, file_name, start_from_byte, current_packet_id):
         self.packets = []
         self.current_byte = start_from_byte
         self.start_from_byte = start_from_byte
-        self.arrange_packets(file_name, start_from_byte)
+        self.arrange_packets(file_name, start_from_byte, current_packet_id)
 
     def is_empty(self):
         return len(self.packets) == 0
@@ -35,19 +31,20 @@ class Buffer:
 
     def add_packet(self, content, packet_id):
         if not self.is_full():
-            packet = Packet(content, packet_id)
+            packet = packets.Packet(content, packet_id)
             self.packets.append(packet)
             self.current_byte += len(content)
         else:
             print("Buffer cheio!")
 
-    def arrange_packets(self, file_name, start_from_byte):
+    def arrange_packets(self, file_name, start_from_byte, current_packet_id):
         file = open(file_name, "rb")
 
         file.read(start_from_byte)
         byte = file.read(max_packet_size)
 
-        packet_id = 0
+        packet_id = current_packet_id
+
         while byte:
             if not self.is_full():
                 self.add_packet(byte, packet_id)
