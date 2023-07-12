@@ -13,6 +13,8 @@ UDP_server_socket.settimeout(5)
 print("Servidor UDP up e escutando...")
 
 current_sequence = 0
+last_written_packet = 0
+next_packet = 0
 connected = False
 setup_success = False
 while True:
@@ -45,7 +47,10 @@ while True:
         except BlockingIOError:
             pass
         except socket.timeout:
-            ack = packets.SignalPacket(packet_id=current_sequence, syn=False, fin=False, ack=True)
+            if not setup_success:
+                ack = packets.SignalPacket(packet_id=current_sequence, syn=False, fin=False, ack=True)
+            else:
+                ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True)
         else:
             client_message = bytes_address_pair[0]
             client_address_port = bytes_address_pair[1]
@@ -60,10 +65,14 @@ while True:
                 continue
 
             if setup_success and isinstance(client_message, packets.Packet):
-                # Ack de confirmação
                 print(client_message.packet_id)
                 f = open(file_to_write_name, "ab")
                 f.write(client_message.content)
+                last_written_packet = client_message.packet_id
+                next_packet = last_written_packet + 1
+                ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True)
+                bytes_to_send = pickle.dumps(ack)
+                UDP_server_socket.sendto(bytes_to_send, client_address_port)
                 f.close()
                 continue
 
@@ -80,5 +89,3 @@ while True:
                 current_sequence = 0
                 connected = False
                 setup_success = False
-
-            # Fin -> voltar o número de sequência pra 0, connected = False, setup_success = False

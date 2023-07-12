@@ -5,7 +5,9 @@ pickle_dump_size = 69
 max_packet_size = 1024 - pickle_dump_size
 buffer_size = 30 * max_packet_size
 
-# Fazer o ack de confirmação
+# Deixar o timeout do servidor menor que do cliente, pra mandar o ack mais cedo e pedir o pacote novamente caso perca
+# Fazer lógica pra escrever o pacote e mandar o ack apenas se for o próximo pacote a ser escrito
+# Fazer lógica para armazenar o pacote caso não ser o próximo a ser escrito e não mandar o ack
 # Fazer a janela deslizante
 
 
@@ -59,3 +61,9 @@ class Buffer:
         for packet in self.packets:
             read_size += len(packet.content)
         return read_size
+
+    def find_packet_by_id(self, packet_id):
+        for packet in self.packets:
+            if packet.packet_id == packet_id:
+                return packet
+        return None
