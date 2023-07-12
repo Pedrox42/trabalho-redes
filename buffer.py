@@ -4,7 +4,7 @@ import packets
 pickle_dump_size = 69
 max_packet_size = 1024 - pickle_dump_size
 buffer_size = 30 * max_packet_size
-# Último pacote -> FIN -> FINACK -> ACK -> Finaliza
+
 # Fazer o ack de confirmação
 # Fazer a janela deslizante
 
