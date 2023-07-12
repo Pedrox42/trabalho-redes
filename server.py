@@ -50,7 +50,7 @@ while True:
             client_message = bytes_address_pair[0]
             client_address_port = bytes_address_pair[1]
             client_message = pickle.loads(client_message)
-            if connected and not setup_success and isinstance(client_message, packets.Packet) and client_message.packet_id == 2:
+            if not setup_success and isinstance(client_message, packets.Packet) and client_message.packet_id == 2:
                 file_to_write_name = "received_" + str(client_message.content)
                 current_sequence += 1
                 ack = packets.SignalPacket(packet_id=current_sequence, syn=False, fin=False, ack=True)
@@ -59,11 +59,26 @@ while True:
                 setup_success = True
                 continue
 
-            if setup_success:
+            if setup_success and isinstance(client_message, packets.Packet):
                 # Ack de confirmação
                 print(client_message.packet_id)
                 f = open(file_to_write_name, "ab")
                 f.write(client_message.content)
                 f.close()
+                continue
+
+            if setup_success and isinstance(client_message, packets.SignalPacket) and client_message.get_type() == "fin":
+                current_sequence += 1
+                finack = packets.SignalPacket(packet_id=current_sequence, syn=False, fin=True, ack=True)
+                bytes_to_send = pickle.dumps(finack)
+                UDP_server_socket.sendto(bytes_to_send, client_address_port)
+                print("server recebeu fin e enviou finack para client")
+                continue
+
+            if setup_success and isinstance(client_message, packets.SignalPacket) and client_message.get_type() == "ack":
+                print("recebemos o last_ack do client")
+                current_sequence = 0
+                connected = False
+                setup_success = False
 
             # Fin -> voltar o número de sequência pra 0, connected = False, setup_success = False

@@ -14,9 +14,10 @@ packet_id = 0
 started_connection = False
 connected = False
 setup_success = False
-while True:
+finish = False
+while not finish:
     # file_name = input("Digite o nome do arquivo a ser enviado: ")
-    file_name = "teste.png"
+    file_name = "teste.pdf"
     print("Tamanho do arquivo: {}".format(os.stat(file_name).st_size))
 
     if not started_connection:
@@ -91,6 +92,32 @@ while True:
                     #     response_packet = pickle.loads(bytes_address_pair[0])
                     #     response_packet_id = response_packet.packet_id
                     client_buffer.packets.remove(packet)
-                # Fin -> connected = False, started_connection = False, setup_success = False
-            break
 
+            # Fin -> connected = False, started_connection = False, setup_success = False
+            packet_id += 1
+            fin_packet = packets.SignalPacket(packet_id=packet_id, syn=False, fin=True, ack=False)
+            bytes_to_send = pickle.dumps(fin_packet)
+            UDP_client_socket.sendto(bytes_to_send, server_address_port)
+            print("enviou o fin para o server")
+            try:
+                bytes_address_pair = UDP_client_socket.recvfrom(buffer.buffer_size)
+            except BlockingIOError:
+                pass
+            except socket.timeout:
+                UDP_client_socket.sendto(bytes_to_send, server_address_port)
+                print("deu timeout e reenviamos o fin para o server")
+            else:
+                server_message = bytes_address_pair[0]
+                server_message = pickle.loads(server_message)
+                if isinstance(server_message, packets.SignalPacket) and server_message.get_type() == "finack":
+                    packet_id += 1
+                    last_ack = packets.SignalPacket(packet_id=packet_id, syn=False, fin=False, ack=True)
+                    bytes_to_send = pickle.dumps(last_ack)
+                    UDP_client_socket.sendto(bytes_to_send, server_address_port)
+
+                    print("recebeu o finack do server, mandou o last_ack e resetou as variáveis")
+                    packet_id = 0
+                    started_connection = False
+                    connected = False
+                    setup_success = False
+                    finish = True

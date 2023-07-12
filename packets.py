@@ -40,7 +40,7 @@ class SignalPacket:
             return "synack"
 
         if self.is_fin():
-            return "fyn"
+            return "fin"
 
         if self.is_fin_ack():
             return "finack"
