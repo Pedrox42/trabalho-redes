@@ -10,7 +10,7 @@ bufferSize = buffer.buffer_size
 UDP_server_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDP_server_socket.bind((localIP, localPort))
 UDP_server_socket.settimeout(5)
-print("Servidor UDP up e escutando...")
+print("Servidor iniciado, aguardando conexão.")
 
 current_sequence = 0
 last_written_packet = 0
@@ -18,6 +18,7 @@ next_packet = 0
 connected = False
 setup_success = False
 while True:
+    # Esperando conexão do cliente
     if not connected:
         try:
             bytes_address_pair = UDP_server_socket.recvfrom(bufferSize)
@@ -41,6 +42,7 @@ while True:
                     connected = True
                     current_sequence += 1
 
+    # Conectou com o cliente
     else:
         try:
             bytes_address_pair = UDP_server_socket.recvfrom(bufferSize)
@@ -52,6 +54,7 @@ while True:
             else:
                 ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True)
         else:
+            # Fazendo o setup para receber o arquivo
             client_message = bytes_address_pair[0]
             client_address_port = bytes_address_pair[1]
             client_message = pickle.loads(client_message)
@@ -64,6 +67,7 @@ while True:
                 setup_success = True
                 continue
 
+            # Recebeu um pacote de arquivo que deve ser escrito
             if setup_success and isinstance(client_message, packets.Packet):
                 print(client_message.packet_id)
                 f = open(file_to_write_name, "ab")
@@ -76,6 +80,7 @@ while True:
                 f.close()
                 continue
 
+            # Recebeu um pacote de sinal do cliente para finalizar a conexão
             if setup_success and isinstance(client_message, packets.SignalPacket) and client_message.get_type() == "fin":
                 current_sequence += 1
                 finack = packets.SignalPacket(packet_id=current_sequence, syn=False, fin=True, ack=True)
@@ -84,6 +89,7 @@ while True:
                 print("server recebeu fin e enviou finack para client")
                 continue
 
+            # Recebeu um pacote de sinal de ack do cliente para confirmar a finalização da conexão
             if setup_success and isinstance(client_message, packets.SignalPacket) and client_message.get_type() == "ack":
                 print("recebemos o last_ack do client")
                 current_sequence = 0

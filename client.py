@@ -16,11 +16,12 @@ connected = False
 setup_success = False
 finish = False
 while not finish:
-    # file_name = input("Digite o nome do arquivo a ser enviado: ")
-    file_name = "teste.png"
-    print("Tamanho do arquivo: {}".format(os.stat(file_name).st_size))
 
+    # Manda um pacote de sinal para tentar iniciar a conexão com o servidor
     if not started_connection:
+        # file_name = input("Digite o nome do arquivo a ser enviado: ")
+        file_name = "teste.pdf"
+        print("Tamanho do arquivo: {}".format(os.stat(file_name).st_size))
         syn_packet = packets.SignalPacket(packet_id=packet_id, syn=True, fin=False, ack=False)
         bytes_to_send = pickle.dumps(syn_packet)
         UDP_client_socket.sendto(bytes_to_send, server_address_port)
@@ -38,7 +39,9 @@ while not finish:
                     started_connection = True
                     packet_id += 1
 
+    # Conectou com o servidor
     else:
+        # Enviar o pacote para fazer o setup para o arquivo que deve ser escrito para o servidor
         if not setup_success:
             ack = packets.SignalPacket(packet_id=packet_id, syn=False, fin=False, ack=True)
             bytes_to_send = pickle.dumps(ack)
@@ -65,6 +68,7 @@ while not finish:
                 else:
                     packet_id = 1
 
+        # Envia o arquivo em pacotes para o servidor
         if connected and setup_success:
             start_from_byte = 0
             client_buffer = buffer.Buffer(file_name, start_from_byte, packet_id)
@@ -100,7 +104,7 @@ while not finish:
                     if packet_to_remove is not None:
                         client_buffer.packets.remove(packet_to_remove)
 
-            # Fin -> connected = False, started_connection = False, setup_success = False
+            # Envia um pacote de sin (fin) para fazer o processo de finalização da conexão
             packet_id += 1
             fin_packet = packets.SignalPacket(packet_id=packet_id, syn=False, fin=True, ack=False)
             bytes_to_send = pickle.dumps(fin_packet)
