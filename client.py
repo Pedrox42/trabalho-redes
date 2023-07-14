@@ -1,6 +1,7 @@
 import os
+import random
 import socket
-import buffer
+import buffers
 import pickle
 import math
 
@@ -26,7 +27,7 @@ while not finish:
         bytes_to_send = pickle.dumps(syn_packet)
         UDP_client_socket.sendto(bytes_to_send, server_address_port)
         try:
-            bytes_address_pair = UDP_client_socket.recvfrom(buffer.buffer_size)
+            bytes_address_pair = UDP_client_socket.recvfrom(buffers.buffer_size)
         except BlockingIOError:
             pass
         except socket.timeout:
@@ -52,7 +53,7 @@ while not finish:
             bytes_to_send = pickle.dumps(setup_packet)
             UDP_client_socket.sendto(bytes_to_send, server_address_port)
             try:
-                bytes_address_pair = UDP_client_socket.recvfrom(buffer.buffer_size)
+                bytes_address_pair = UDP_client_socket.recvfrom(buffers.buffer_size)
             except BlockingIOError:
                 pass
             except socket.timeout:
@@ -71,7 +72,7 @@ while not finish:
         # Envia o arquivo em pacotes para o servidor
         if connected and setup_success:
             start_from_byte = 0
-            client_buffer = buffer.Buffer(file_name, start_from_byte, packet_id)
+            client_buffer = buffers.ClientBuffer(buffers.buffer_size, file_name, start_from_byte, packet_id)
 
             while connected and not client_buffer.is_empty():
                 next_packet_to_send = client_buffer.find_packet_by_id(next_packet_to_send_id)
@@ -90,7 +91,7 @@ while not finish:
                         client_buffer.add_packet(byte, packet_id)
 
                 try:
-                    bytes_address_pair = UDP_client_socket.recvfrom(buffer.buffer_size)
+                    bytes_address_pair = UDP_client_socket.recvfrom(buffers.buffer_size)
                 except BlockingIOError:
                     pass
                 except socket.timeout:
@@ -111,7 +112,7 @@ while not finish:
             UDP_client_socket.sendto(bytes_to_send, server_address_port)
             print("enviou o fin para o server")
             try:
-                bytes_address_pair = UDP_client_socket.recvfrom(buffer.buffer_size)
+                bytes_address_pair = UDP_client_socket.recvfrom(buffers.buffer_size)
             except BlockingIOError:
                 pass
             except socket.timeout:
