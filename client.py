@@ -12,6 +12,7 @@ UDP_client_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDP_client_socket.setblocking(False)
 UDP_client_socket.settimeout(5)
 packet_id = 0
+server_recvwnd = 10
 started_connection = False
 connected = False
 setup_success = False
@@ -65,6 +66,7 @@ while not finish:
                     packet_id += 1
                     connected = True
                     setup_success = True
+                    sending = True
                     next_packet_to_send_id = packet_id
                 else:
                     packet_id = 1
@@ -74,36 +76,50 @@ while not finish:
             start_from_byte = 0
             client_buffer = buffers.ClientBuffer(buffers.buffer_size, file_name, start_from_byte, packet_id)
 
-            while connected and not client_buffer.is_empty():
-                next_packet_to_send = client_buffer.find_packet_by_id(next_packet_to_send_id)
-                print("Enviando pacote de número {}".format(next_packet_to_send.packet_id))
-                bytes_to_send = pickle.dumps(next_packet_to_send)
-                UDP_client_socket.sendto(bytes_to_send, server_address_port)
-
-                last_packet_last_byte = client_buffer.current_byte
-                file = open(file_name, "rb")
-                file.read(last_packet_last_byte)
-
-                packet_id = client_buffer.packets[-1].packet_id + 1
-                if client_buffer.free_space() > 0:
-                    byte = file.read(client_buffer.free_space() - (math.ceil(packet_id.bit_length() / 8)))
-                    if byte:
-                        client_buffer.add_packet(byte, packet_id)
-
-                try:
-                    bytes_address_pair = UDP_client_socket.recvfrom(buffers.buffer_size)
-                except BlockingIOError:
-                    pass
-                except socket.timeout:
-                    UDP_client_socket.sendto(bytes_to_send, server_address_port)
+            while connected and sending:
+                if len(client_buffer.packets) < server_recvwnd:
+                    used_range = range(len(client_buffer.packets))
                 else:
-                    response_packet = pickle.loads(bytes_address_pair[0])
-                    response_packet_id = response_packet.packet_id
-                    next_packet_to_send_id = response_packet_id
-                    last_confirmed_packet = response_packet_id - 1
-                    packet_to_remove = client_buffer.find_packet_by_id(last_confirmed_packet)
-                    if packet_to_remove is not None:
-                        client_buffer.packets.remove(packet_to_remove)
+                    used_range = range(server_recvwnd)
+
+                for i in used_range:
+                    if client_buffer.packets[i]:
+                        next_packet_to_send = client_buffer.packets[i]
+                        print("Enviando pacote de número {}".format(next_packet_to_send.packet_id))
+                        bytes_to_send = pickle.dumps(next_packet_to_send)
+                        UDP_client_socket.sendto(bytes_to_send, server_address_port)
+
+                for i in used_range:
+                    try:
+                        bytes_address_pair = UDP_client_socket.recvfrom(buffers.buffer_size)
+                    except BlockingIOError:
+                        pass
+                    except socket.timeout:
+                        UDP_client_socket.sendto(bytes_to_send, server_address_port)
+                    else:
+                        response_packet = pickle.loads(bytes_address_pair[0])
+                        response_packet_id = response_packet.packet_id
+                        next_packet_to_send_id = response_packet_id
+                        last_confirmed_packet_id = response_packet_id - 1
+                        server_recvwnd = response_packet.recvwnd
+                        client_buffer.remove_all_before(last_confirmed_packet_id)
+
+                        last_packet_last_byte = client_buffer.current_byte
+                        file = open(file_name, "rb")
+                        file.read(last_packet_last_byte)
+
+                        if not client_buffer.is_empty():
+                            packet_id = client_buffer.packets[-1].packet_id + 1
+                        else:
+                            packet_id = last_confirmed_packet_id + 1
+
+                        if client_buffer.free_space() > 0:
+                            byte = file.read(client_buffer.free_space() - (math.ceil(packet_id.bit_length() / 8)))
+                            if byte:
+                                client_buffer.add_packet(byte, packet_id)
+                            else:
+                                if client_buffer.is_empty():
+                                    sending = False
 
             # Envia um pacote de sin (fin) para fazer o processo de finalização da conexão
             packet_id += 1
@@ -133,3 +149,6 @@ while not finish:
                     connected = False
                     setup_success = False
                     finish = True
+
+                else:
+                    UDP_client_socket.sendto(bytes_to_send, server_address_port)

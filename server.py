@@ -13,6 +13,7 @@ UDP_server_socket.bind((localIP, localPort))
 UDP_server_socket.settimeout(5)
 print("Servidor iniciado, aguardando conexão.")
 current_sequence = 0
+i = 0
 
 connected = False
 setup_success = False
@@ -53,7 +54,9 @@ while True:
             if not setup_success:
                 ack = packets.SignalPacket(packet_id=current_sequence, syn=False, fin=False, ack=True)
             else:
-                ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True)
+                ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True, recvwnd=10)
+                print("Enviando ack pedindo pacote: {}, i = {}".format(next_packet, i))
+                i += 1
         else:
             if random.randint(0, 100) < 1:
                 continue
@@ -82,14 +85,13 @@ while True:
                 f = open(file_to_write_name, "ab")
                 for packet in storage_buffer.packets:
                     if last_written_packet + 1 == packet.packet_id:
-                        f.write(client_message.content)
                         print(client_message.packet_id)
+                        f.write(client_message.content)
                         last_written_packet = packet.packet_id
                         next_packet = last_written_packet + 1
                         storage_buffer.packets.remove(packet)
                 f.close()
-
-                ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True)
+                ack = packets.SignalPacket(packet_id=next_packet, syn=False, fin=False, ack=True, recvwnd=10)
                 bytes_to_send = pickle.dumps(ack)
                 UDP_server_socket.sendto(bytes_to_send, client_address_port)
                 continue

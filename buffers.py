@@ -5,9 +5,6 @@ pickle_dump_size = 69
 max_packet_size = 1024 - pickle_dump_size
 buffer_size = 30 * max_packet_size
 
-# Deixar o timeout do servidor menor que do cliente, pra mandar o ack mais cedo e pedir o pacote novamente caso perca
-# Fazer a janela deslizante
-
 
 class Buffer:
 
@@ -72,6 +69,15 @@ class ClientBuffer(Buffer):
         for packet in self.packets:
             read_size += len(packet.content)
         return read_size
+
+    def remove_all_before(self, packet_id):
+        packets_to_remove = []
+        for packet in self.packets:
+            if packet.packet_id <= packet_id:
+                packets_to_remove.append(packet)
+
+        for packet in packets_to_remove:
+            self.packets.remove(packet)
 
 
 class ServerBuffer(Buffer):
