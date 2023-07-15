@@ -1,10 +1,9 @@
 import os
-import random
 import socket
 import buffers
 import pickle
 import math
-
+import protocolo
 import packets
 
 server_address_port = ("127.0.0.1", 20001)
@@ -17,6 +16,7 @@ started_connection = False
 connected = False
 setup_success = False
 finish = False
+protocol = protocolo.TcpPcc(mss=10, tcp_type='reno', fast_forward=True)
 while not finish:
 
     # Manda um pacote de sinal para tentar iniciar a conexão com o servidor
@@ -67,6 +67,8 @@ while not finish:
                     connected = True
                     setup_success = True
                     sending = True
+                    timeout = False
+                    last_confirmed_packet_id = packet_id - 1
                     next_packet_to_send_id = packet_id
                 else:
                     packet_id = 1
@@ -75,7 +77,6 @@ while not finish:
         if connected and setup_success:
             start_from_byte = 0
             client_buffer = buffers.ClientBuffer(buffers.buffer_size, file_name, start_from_byte, packet_id)
-
             while connected and sending:
                 if len(client_buffer.packets) < server_recvwnd:
                     used_range = range(len(client_buffer.packets))
@@ -95,13 +96,14 @@ while not finish:
                     except BlockingIOError:
                         pass
                     except socket.timeout:
-                        UDP_client_socket.sendto(bytes_to_send, server_address_port)
+                        timeout = True
+                        break
                     else:
+                        timeout = False
                         response_packet = pickle.loads(bytes_address_pair[0])
                         response_packet_id = response_packet.packet_id
                         next_packet_to_send_id = response_packet_id
                         last_confirmed_packet_id = response_packet_id - 1
-                        server_recvwnd = response_packet.recvwnd
                         client_buffer.remove_all_before(last_confirmed_packet_id)
 
                         last_packet_last_byte = client_buffer.current_byte
@@ -120,6 +122,9 @@ while not finish:
                             else:
                                 if client_buffer.is_empty():
                                     sending = False
+                        file.close()
+
+                server_recvwnd = protocol.next_mss(ack=last_confirmed_packet_id, timeout=timeout, rtt=0.001)
 
             # Envia um pacote de sin (fin) para fazer o processo de finalização da conexão
             packet_id += 1
@@ -152,3 +157,6 @@ while not finish:
 
                 else:
                     UDP_client_socket.sendto(bytes_to_send, server_address_port)
+
+
+protocol.plot_congestion()

@@ -11,12 +11,11 @@ class Packet:
 
 
 class SignalPacket:
-    def __init__(self, packet_id, syn, fin, ack, recvwnd=10):
+    def __init__(self, packet_id, syn, fin, ack):
         self.packet_id = packet_id
         self.syn = syn
         self.fin = fin
         self.ack = ack
-        self.recvwnd = recvwnd
 
     def is_syn(self):
         return self.syn and not self.ack

@@ -3,7 +3,8 @@ import packets
 
 pickle_dump_size = 69
 max_packet_size = 1024 - pickle_dump_size
-buffer_size = 30 * max_packet_size
+total_packets = 500
+buffer_size = total_packets * max_packet_size
 
 
 class Buffer:
