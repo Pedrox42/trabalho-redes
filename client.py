@@ -9,7 +9,7 @@ import packets
 server_address_port = ("127.0.0.1", 20001)
 UDP_client_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDP_client_socket.setblocking(False)
-UDP_client_socket.settimeout(5)
+UDP_client_socket.settimeout(0.002)
 packet_id = 0
 server_recvwnd = 10
 started_connection = False
@@ -97,7 +97,10 @@ while not finish:
                         pass
                     except socket.timeout:
                         timeout = True
+                        print("Timeout")
                         break
+                    # except OSError:
+                    #     pass
                     else:
                         timeout = False
                         response_packet = pickle.loads(bytes_address_pair[0])

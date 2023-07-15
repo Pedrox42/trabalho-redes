@@ -10,10 +10,11 @@ bufferSize = buffers.buffer_size
 
 UDP_server_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDP_server_socket.bind((localIP, localPort))
-UDP_server_socket.settimeout(1)
+UDP_server_socket.settimeout(0.004)
 print("Servidor iniciado, aguardando conexão.")
 current_sequence = 0
 i = 0
+ending_connection_timeout_counter = 0
 client_address_port = ()
 connected = False
 setup_success = False
@@ -62,8 +63,19 @@ while True:
                 UDP_server_socket.sendto(bytes_to_send, client_address_port)
                 print("Enviando ack pedindo pacote: {}, i = {}".format(next_packet, i))
                 i += 1
+            if ending_connection:
+                ending_connection_timeout_counter += 1
+            if ending_connection_timeout_counter > 3:
+                print("Não recebemos o last ack do cliente e já pedimos 3 vezes. Fechando conexão.")
+                current_sequence = 0
+                ending_connection_timeout_counter = 0
+                connected = False
+                setup_success = False
+                ending_connection = False
+                f.close()
+                continue
         else:
-            if random.randint(0, 100000) < 1:
+            if random.randint(0, 100) <= 50:
                 continue
             # Fazendo o setup para receber o arquivo
             client_message = bytes_address_pair[0]
@@ -76,12 +88,13 @@ while True:
                 bytes_to_send = pickle.dumps(ack)
                 UDP_server_socket.sendto(bytes_to_send, client_address_port)
                 setup_success = True
+                ending_connection = False
                 last_written_packet = 2
                 next_packet = 3
                 continue
 
             # Recebeu um pacote de arquivo que deve ser escrito
-            if setup_success and isinstance(client_message, packets.Packet):
+            if setup_success and isinstance(client_message, packets.Packet) and not ending_connection:
                 # Armazenar o pacote se não for pra escrever, escrever até ter que parar de novo
                 if storage_buffer.find_packet_by_id(client_message.packet_id) is None and client_message.packet_id > last_written_packet:
                     storage_buffer.add_packet(client_message)
@@ -89,9 +102,9 @@ while True:
                 f = open(file_to_write_name, "ab")
                 for packet in storage_buffer.packets:
                     if last_written_packet + 1 == packet.packet_id:
-                        print(client_message.packet_id)
-                        f.write(client_message.content)
-                        last_written_packet += 1
+                        print(packet.packet_id)
+                        f.write(packet.content)
+                        last_written_packet = packet.packet_id
                         next_packet = last_written_packet + 1
                         storage_buffer.packets.remove(packet)
                     else:
@@ -108,6 +121,7 @@ while True:
                 bytes_to_send = pickle.dumps(finack)
                 UDP_server_socket.sendto(bytes_to_send, client_address_port)
                 print("server recebeu fin e enviou finack para client")
+                ending_connection = True
                 continue
 
             # Recebeu um pacote de sinal de ack do cliente para confirmar a finalização da conexão
@@ -116,5 +130,7 @@ while True:
                 current_sequence = 0
                 connected = False
                 setup_success = False
+                ending_connection = False
+                ending_connection_timeout_counter = 0
                 f.close()
 
