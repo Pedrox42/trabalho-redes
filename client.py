@@ -5,6 +5,7 @@ import pickle
 import math
 import protocolo
 import packets
+import numpy as np
 
 server_address_port = ("127.0.0.1", 20001)
 UDP_client_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -16,13 +17,12 @@ started_connection = False
 connected = False
 setup_success = False
 finish = False
-protocol = protocolo.TcpPcc(mss=10, tcp_type='reno', fast_forward=True)
+protocol = protocolo.TcpPcc(mss=10, tcp_type='reno', fast_forward=False)
 while not finish:
 
     # Manda um pacote de sinal para tentar iniciar a conexão com o servidor
     if not started_connection:
-        # file_name = input("Digite o nome do arquivo a ser enviado: ")
-        file_name = "teste.pdf"
+        file_name = input("Digite o nome do arquivo a ser enviado: ")
         print("Tamanho do arquivo: {}".format(os.stat(file_name).st_size))
         syn_packet = packets.SignalPacket(packet_id=packet_id, syn=True, fin=False, ack=False)
         bytes_to_send = pickle.dumps(syn_packet)
@@ -99,8 +99,6 @@ while not finish:
                         timeout = True
                         print("Timeout")
                         break
-                    # except OSError:
-                    #     pass
                     else:
                         timeout = False
                         response_packet = pickle.loads(bytes_address_pair[0])
@@ -127,7 +125,11 @@ while not finish:
                                     sending = False
                         file.close()
 
-                server_recvwnd = protocol.next_mss(ack=last_confirmed_packet_id, timeout=timeout, rtt=0.001)
+                if not timeout:
+                    rtt = ((np.random.normal(1) + 3.1) / 600)
+                else:
+                    rtt = 5
+                server_recvwnd = protocol.next_mss(ack=last_confirmed_packet_id, timeout=timeout, rtt=rtt)
 
             # Envia um pacote de sin (fin) para fazer o processo de finalização da conexão
             packet_id += 1
@@ -163,3 +165,4 @@ while not finish:
 
 
 protocol.plot_congestion()
+protocol.plot_throughput()

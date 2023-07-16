@@ -10,7 +10,7 @@ bufferSize = buffers.buffer_size
 
 UDP_server_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDP_server_socket.bind((localIP, localPort))
-UDP_server_socket.settimeout(0.004)
+UDP_server_socket.settimeout(0.008)
 print("Servidor iniciado, aguardando conexão.")
 current_sequence = 0
 i = 0
@@ -75,7 +75,7 @@ while True:
                 f.close()
                 continue
         else:
-            if random.randint(0, 100) <= 50:
+            if random.randint(0, 100) <= 10:
                 continue
             # Fazendo o setup para receber o arquivo
             client_message = bytes_address_pair[0]

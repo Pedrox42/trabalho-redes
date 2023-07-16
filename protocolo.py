@@ -55,7 +55,6 @@ class TcpPcc:
         else:
             self.cwnd += 1   # Congestion avoidance
             self.track_fast_forwards.append(0)
-        self.cwnd = min(self.cwnd, self.max)
 
     # lidar com timeout
     def handle_timeout(self):
